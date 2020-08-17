@@ -1,0 +1,33 @@
+name: imputeme
+channels:
+  - conda-forge
+  - anaconda
+  - bioconda
+  - defaults
+  - https://mirrors.tuna.tsinghua.edu.cn/anaconda/pkgs/r/
+  - https://mirrors.tuna.tsinghua.edu.cn/anaconda/pkgs/main/
+  - https://mirrors.tuna.tsinghua.edu.cn/anaconda/pkgs/free/
+dependencies:
+  - python=3.8
+  - r-base=4.0.3
+  - parallel
+  - dos2unix
+  - rename
+  - git=2.28.0
+  - htslib=1.9
+  - bcftools=1.9
+  - bedtools
+  - vcftools=0.1.16
+  - perl-vcftools-vcf
+  - vcflib
+  - plink
+  - plink2
+  - shapeit4
+  - impute2
+  - ucsc-liftover
+  - hapbin
+  - admixture
+  - structure
+  - ghostscript
+  - openjdk
+prefix: /home/work/rps/softwares/miniconda3/envs/imputeme

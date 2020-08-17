@@ -1,0 +1,63 @@
+###################################
+##### Managing conda packages #####
+###################################
+
+### Create conda environment
+conda create -y --name my_environmment
+#or
+conda create -y -n my_environmment
+
+
+### Create conda environment with a specific python version
+conda create -y --name my_environmment python=3.8
+
+
+### Activate conda environment
+conda activate my_environmment
+
+
+### Install a conda package
+conda install -y -n my_environmment -c bioconda package_name
+#or
+conda install -y -n my_environmment -c bioconda package_name =version
+
+
+### Search info conda package
+conda search package_name --info
+
+
+### List installed conda packages
+conda list
+#or
+conda list --explicit
+
+
+### List conda environments
+conda env list
+
+
+### Check informations about the active conda environment
+conda info
+
+
+### Update a conda program
+conda update -y -n my_environmment -c bioconda package_name
+
+
+### Remove a conda program
+conda remove -n my_environmment package_name
+
+
+### Deactivate conda environment
+conda deactivate
+
+
+### Removing conda environment
+conda env remove --name my_environmment #or
+conda env remove -n my_environmment
+
+
+### Check python version of all conda environments
+conda env list | grep -v "^$\|#" |awk '{print $1;}'|xargs -I{} -d "\n" sh -c 'printf "Env: {}\t"; conda list -n {} |grep "^python\s";'
+
+

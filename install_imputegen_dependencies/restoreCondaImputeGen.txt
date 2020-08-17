@@ -1,0 +1,86 @@
+##################################
+##### RESTORE CONDA ENV IVDP #####
+#################################
+
+##### 1. Create YML files
+
+conda activate imputegen
+conda env export > imputegen.yml
+conda env export --from-history > imputegen_fh.yml
+conda deactivate
+
+conda activate r-env4.0
+conda env export > r-env4.0.yml
+conda env export --from-history > r-env4.0_fh.yml
+conda deactivate
+
+
+##### 2. Restore IMPUTEME from .yml
+
+conda env create -f imputegen.yml
+conda env create -f r-env4.0.yml
+
+conda activate imputegen
+FileName=$(which python)
+CONDA=${FileName%/*/*/*}/imputegen/bin
+wget https://storage.googleapis.com/broad-alkesgroup-public/Eagle/downloads/Eagle_v2.4.1.tar.gz
+wait
+tar -xf Eagle_v2.4.1.tar.gz
+wait
+mv Eagle_v2.4.1/eagle $CONDA
+wait
+rm -rf Eagle_v2* 2> /dev/null
+wait
+wget https://faculty.washington.edu/browning/beagle/beagle.21Apr21.304.jar
+wait
+mv beagle*jar $CONDA/beagle.jar
+wait
+git clone https://github.com/odelaneau/GLIMPSE.git glimpse
+wait
+mv glimpse/static_bins/GLIMPSE_chunk_static $CONDA/GLIMPSE_chunk
+mv glimpse/static_bins/GLIMPSE_concordance_static $CONDA/GLIMPSE_concordance
+mv glimpse/static_bins/GLIMPSE_ligate_static $CONDA/GLIMPSE_ligate
+mv glimpse/static_bins/GLIMPSE_phase_static $CONDA/GLIMPSE_phase
+mv glimpse/static_bins/GLIMPSE_sample_static $CONDA/GLIMPSE_sample
+mv glimpse/static_bins/GLIMPSE_snparray_static $CONDA/GLIMPSE_snparray
+mv glimpse/static_bins/GLIMPSE_stats_static $CONDA/GLIMPSE_stats
+wait
+rm -rf glimpse 2> /dev/null
+wait
+conda deactivate
+
+
+##### 3. Restore IMPUTEME from _fh.yml (if step 2 didn't work)
+
+conda env create -f imputegen_fh.yml
+conda env create -f r-env4.0_fh.yml
+
+conda activate imputegen
+FileName=$(which python)
+CONDA=${FileName%/*/*/*}/imputegen/bin
+wget https://storage.googleapis.com/broad-alkesgroup-public/Eagle/downloads/Eagle_v2.4.1.tar.gz
+wait
+tar -xf Eagle_v2.4.1.tar.gz
+wait
+mv Eagle_v2.4.1/eagle $CONDA
+wait
+rm -rf Eagle_v2* 2> /dev/null
+wait
+wget https://faculty.washington.edu/browning/beagle/beagle.21Apr21.304.jar
+wait
+mv beagle*jar $CONDA/beagle.jar
+wait
+git clone https://github.com/odelaneau/GLIMPSE.git glimpse
+wait
+mv glimpse/static_bins/GLIMPSE_chunk_static $CONDA/GLIMPSE_chunk
+mv glimpse/static_bins/GLIMPSE_concordance_static $CONDA/GLIMPSE_concordance
+mv glimpse/static_bins/GLIMPSE_ligate_static $CONDA/GLIMPSE_ligate
+mv glimpse/static_bins/GLIMPSE_phase_static $CONDA/GLIMPSE_phase
+mv glimpse/static_bins/GLIMPSE_sample_static $CONDA/GLIMPSE_sample
+mv glimpse/static_bins/GLIMPSE_snparray_static $CONDA/GLIMPSE_snparray
+mv glimpse/static_bins/GLIMPSE_stats_static $CONDA/GLIMPSE_stats
+wait
+rm -rf glimpse 2> /dev/null
+wait
+conda deactivate
+

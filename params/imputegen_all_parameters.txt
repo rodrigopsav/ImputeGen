@@ -1,0 +1,40 @@
+# For more details about ImputeMe parameters, visit https://github.com/rodrigopsav/imputegen
+
+##########################################################
+############### INPUT DATA AND OUTPUT FOLDER #############
+
+|REF_GENOME=/home/work/rps/softwares/ImputeMe/examplesImputeMe/ARS-UCD1.2_Btau5.0.1Y_chrom29.fa
+|REF_PANEL_DIR=/home/work/rps/softwares/ImputeMe/examplesImputeMe
+|REF_PANEL_PREFIX=phased_filtered_holRefPop_chr
+|VAL_PANEL_DIR=/home/work/rps/softwares/ImputeMe/examplesImputeMe
+|VAL_PANEL_PREFIX=phased_filtered_holValPop_chr
+|GENO_PANEL=/home/work/rps/softwares/ImputeMe/examplesImputeMe/holImputPop_chr29.vcf.gz 
+|BAM_DIR=none
+|PEDIGREE=none
+|FINDHAPF90=none
+|GENETIC_MAP=1cMperMb
+|OUTPUT_DIR=/home/work/rps/output
+|OUTPUT_NAME=50K_seq
+
+##########################################################
+##################### GENERAL PARAMETERS #################
+
+|PHASING_PROGRAM=eagle #options: eagle, beagle, shapeit4, glimpse, none
+|IMPUTE_PROGRAM=beagle #options: minimac3, beagle, none
+
+|CHROM_SET=29
+|INCLUDE_CHROM_X=no
+|SELECT_CHROM=1, 2, 3:300-500
+|MAF=0.01
+|MISSING=0.1
+|DOWN_SCALING=0
+|THREADS=40     # Only for local machine
+|MEM=32         # Only for local machine
+|BATCH=5        # Only for local machine
+
+##########################################################
+
+#REF_GENOME=none deactivate check switched alleles
+#VAL_PANEL_DIR=none deactivate imputation accuracy
+#REF_PANEL_PREFIX=none deactivate imputation accuracy
+

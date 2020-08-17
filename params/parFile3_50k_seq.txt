@@ -1,0 +1,32 @@
+# For more details about ImputeMe parameters, visit https://github.com/rodrigopsav/imputegen
+
+##########################################################
+############### INPUT DATA AND OUTPUT FOLDER #############
+
+|REF_GENOME=./examples/ARS-UCD1.2_Btau5.0.1Y_chrom29.fa
+|REF_PANEL_DIR=./examples
+|REF_PANEL_PREFIX=phased_filtered_holRefPop_chr
+|VAL_PANEL_DIR=./examples
+|VAL_PANEL_PREFIX=phased_filtered_holValPop_chr
+|GENO_PANEL=./examples/holImputPop_chr29.vcf.gz 
+|GENETIC_MAP=1cMperMb
+|OUTPUT_DIR=./output
+|OUTPUT_NAME=ex3_50K_seq
+
+##########################################################
+##################### GENERAL PARAMETERS #################
+
+|PHASING_PROGRAM=eagle
+|IMPUTE_PROGRAM=minimac3
+
+|CHROM_SET=29
+|INCLUDE_CHROM_X=no
+|SELECT_CHROM=29
+|MAF=0.005
+|MISSING=0.2
+|DOWN_SCALING=0
+|THREADS=40     # Only for local machine
+|MEM=32         # Only for local machine
+|BATCH=5        # Only for local machine
+
+##########################################################

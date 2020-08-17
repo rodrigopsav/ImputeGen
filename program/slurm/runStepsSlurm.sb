@@ -1,0 +1,158 @@
+#!/bin/bash
+
+##########################################################
+########### SBATCH Lines for Resource Request ############
+##########################################################
+
+# Number of nodes needed: could be an exact number or a range of nodes (same as -N)
+#SBATCH --nodes=1
+#
+# Tasks per node:
+#SBATCH --ntasks-per-node=1
+##########################################################
+
+#
+#
+#
+
+eval "$(conda shell.bash hook)"
+conda activate imputeme
+conda activate --stack r-env4.0
+export CONDA_DEFAULT_ENV=$CONDA_DEFAULT_ENV
+export THREADS=$SLURM_CPUS_PER_TASK
+export MEM=$(printf %.0f $(echo $SLURM_MEM_PER_NODE / 1024 | bc -l))
+wait
+
+START1=$(date +%s)
+
+
+##################
+##### Header #####
+##################
+source $IMPUTEME_DIR/program/01_header.sh > $OUTPUT_DIR/imputeGen_"$OUTPUT_NAME"/log/"$OUTPUT_NAME"_"$FileExtension".txt 2>&1
+wait
+
+
+################################
+##### Check Switch Ref/Alt #####
+################################
+(
+if [[ $REF_GENOME != "none" ]]; then
+   source $IMPUTEME_DIR/program/02_switch_RefAlt.sh
+fi
+) >> $OUTPUT_DIR/imputeGen_"$OUTPUT_NAME"/log/"$OUTPUT_NAME"_"$FileExtension".txt 2>&1
+wait
+
+
+#######################
+##### Downscaling #####
+#######################
+(
+if [[ $DOWN_SCALING != 0 ]]; then
+   source $IMPUTEME_DIR/program/03_downScaling.sh
+fi
+) >> $OUTPUT_DIR/imputeGen_"$OUTPUT_NAME"/log/"$OUTPUT_NAME"_"$FileExtension".txt 2>&1
+wait
+
+
+##################
+##### Filter #####
+##################
+(
+if [[ $MAF != 0 || $MISSING != 0 ]]; then
+   source $IMPUTEME_DIR/program/04_filter.sh
+fi
+) >> $OUTPUT_DIR/imputeGen_"$OUTPUT_NAME"/log/"$OUTPUT_NAME"_"$FileExtension".txt 2>&1
+wait
+
+
+###################
+##### Phasing #####
+###################
+(
+if [[ $PHASING_PROGRAM == "eagle" || $PHASING_PROGRAM == "beagle" || $PHASING_PROGRAM == "shapeit4" || $PHASING_PROGRAM == "glimpse" || $PHASING_PROGRAM == "whatsHap" || $PHASING_PROGRAM == "stitch" ]]; then
+   source $IMPUTEME_DIR/program/05_phasing_"$PHASING_PROGRAM".sh
+fi
+) >> $OUTPUT_DIR/imputeGen_"$OUTPUT_NAME"/log/"$OUTPUT_NAME"_"$FileExtension".txt 2>&1
+wait
+
+
+######################
+##### Imputation #####
+######################
+(
+if [[ "$IMPUTE_PROGRAM" != "none" ]]; then
+   if [[ "$REF_PANEL_DIR" != "none" ]]; then
+      source $IMPUTEME_DIR/program/06_imputation_"$IMPUTE_PROGRAM".sh
+   
+   else
+      
+      echo
+      echo "SKIP IMPUTATION: there is no Reference panel for imputation analysis"
+      echo "Phased low density panel files are in $PHASE"
+      exit 1
+   
+   fi
+fi
+) >> $OUTPUT_DIR/imputeGen_"$OUTPUT_NAME"/log/"$OUTPUT_NAME"_"$FileExtension".txt 2>&1
+wait
+
+if [[ $IMPUTE_PROGRAM == "beagle" || $IMPUTE_PROGRAM == "impute5" ]]; then
+   if [[ $(bcftools view -H "$IMPUTE/imputed_"$FileExtension".vcf.gz" | wc -l) == 0 ]]; then
+      echo "#@ ERROR: No imputed_"$FileExtension".vcf.gz in $IMPUTE. Please check any possible error on Imputation Step"
+      exit 1
+   fi
+else
+   if [[ $(bcftools view -H "$IMPUTE/imputed_"$FileExtension".dose.vcf.gz" | wc -l) == 0 ]]; then
+      echo "#@ ERROR: No imputed_"$FileExtension".vcf.gz in $IMPUTE. Please check any possible error on Imputation Step"
+      exit 1
+   fi
+fi
+wait
+
+
+#######################################
+##### Accuracy - prepare the data #####
+#######################################
+(
+if [[ $DOWN_SCALING != 0 || $VAL_PANEL_DIR != "none" ]]; then
+
+   if [[ $IMPUTE_PROGRAM == "beagle" ]]; then
+      source $IMPUTEME_DIR/program/07_acc_downScaled_externalVal_beagle.sh
+
+   elif [[ $IMPUTE_PROGRAM == "impute5" ]]; then
+      source $IMPUTEME_DIR/program/07_acc_downScaled_externalVal_impute5.sh
+               
+   else
+      source $IMPUTEME_DIR/program/07_acc_downScaled_externalVal_minimac3.sh
+      
+   fi
+   wait
+   
+else
+
+   if [[ $IMPUTE_PROGRAM == "beagle" ]]; then
+      source $IMPUTEME_DIR/program/acc_beagle.sh
+
+   elif [[ $IMPUTE_PROGRAM == "impute5" ]]; then
+      source $IMPUTEME_DIR/program/acc_impute5.sh
+               
+   else
+      source $IMPUTEME_DIR/program/acc_minimac3.sh
+      
+   fi
+   wait
+
+fi
+) >> $OUTPUT_DIR/imputeGen_"$OUTPUT_NAME"/log/"$OUTPUT_NAME"_"$FileExtension".txt 2>&1
+wait
+
+
+END1=$(date +%s)
+DIFF1=$(( $END1 - $START1 ))
+
+(
+echo
+echo "#@ ImputeMe $OUTPUT_NAME took $(printf '%dh:%dm:%ds\n' $(($DIFF1/3600)) $(($DIFF1%3600/60)) $(($DIFF1%60)))"
+echo "#@#############################################################"
+) >> $OUTPUT_DIR/imputeGen_"$OUTPUT_NAME"/log/"$OUTPUT_NAME"_"$FileExtension".txt 2>&1

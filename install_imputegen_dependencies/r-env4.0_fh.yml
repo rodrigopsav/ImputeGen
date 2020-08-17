@@ -1,0 +1,25 @@
+name: r-env4.0
+channels:
+  - conda-forge
+  - anaconda
+  - bioconda
+  - defaults
+  - https://mirrors.tuna.tsinghua.edu.cn/anaconda/pkgs/r/
+  - https://mirrors.tuna.tsinghua.edu.cn/anaconda/pkgs/main/
+  - https://mirrors.tuna.tsinghua.edu.cn/anaconda/pkgs/free/
+dependencies:
+  - r-base=4.0.3
+  - python=3.8
+  - r-dplyr
+  - r-data.table
+  - r-ggplot2
+  - r-gridextra
+  - r-bigmemory.sri
+  - r-rmvp
+  - r-formattable
+  - r-webshot
+  - r-ggrepel
+  - r-vcfr
+  - r-wesanderson
+  - r-fields
+prefix: /home/work/rps/softwares/miniconda3/envs/r-env4.0

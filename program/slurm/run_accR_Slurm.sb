@@ -1,0 +1,162 @@
+#!/bin/bash
+
+##########################################################
+########### SBATCH Lines for Resource Request ############
+##########################################################
+
+# Number of nodes needed: could be an exact number or a range of nodes (same as -N)
+#SBATCH --nodes=1
+#
+# Tasks per node:
+#SBATCH --ntasks-per-node=1
+##########################################################
+
+
+echo "#@#####################################################"
+echo "#@ IMPUTATION ACCURACY"
+D1=$(date "+%D    %T")
+echo "#@ Date and Time: $D1"
+echo "#@#####################################################"
+
+START1=$(date +%s)
+
+### LOAD MODULES
+#module purge
+#module load GCC/7.3.0-2.30  OpenMPI/3.1.1
+#module load R/3.6.2-X11-20180604
+
+
+eval "$(conda shell.bash hook)"
+conda activate imputegen
+conda activate --stack r-env4.0
+export CONDA_DEFAULT_ENV=$CONDA_DEFAULT_ENV
+export THREADS=$SLURM_CPUS_PER_TASK
+export MEM=$(printf %.0f $(echo $SLURM_MEM_PER_NODE / 1024 | bc -l))
+wait
+
+export SELECT_CHROM=$(cat $PARAMETERS | grep "|SELECT_CHROM" | sed -e "s/[[:space:]]\+//g" | cut -d "=" -f 2- | cut -d "#" -f 1 | tr "," "\n")
+
+
+##### CREATE INITIAL FILES FOR ACCURACY #####
+NPOS=$(echo $SELECT_CHROM | tr " " "\n" | wc -l)
+COUNT=0
+
+
+if [[ $DOWN_SCALING != 0 || $VAL_PANEL_DIR != "none" ]]; then
+   ### CREATE AN EMPTY ARRAY HERE
+   Rscript -e "accPath=\"$ACC\";npos=\"$NPOS\";source(\"$IMPUTEGEN_DIR/program/08_acc1_downScaled_externalVal.R\")"
+else
+   ### CREATE AN EMPTY ARRAY HERE
+   Rscript -e "accPath=\"$ACC\";npos=\"$NPOS\";source(\"$IMPUTEGEN_DIR/program/08_acc1.R\")"
+fi
+wait
+
+
+##### ACCURACY IN R #####
+if [[ $DOWN_SCALING != 0 || $VAL_PANEL_DIR != "none" ]]; then
+   for REGION in $SELECT_CHROM; do
+      COUNT=$(( $COUNT + 1 ))
+      export REGION=$REGION
+      export CHR=$(echo $REGION | awk -F":" '{print $1}')
+      export BPSTART=$(echo $REGION | awk -F":" '{print $2}' | awk -F"-" '{print $1}')
+      export BPEND=$(echo $REGION | awk -F":" '{print $2}' | awk -F"-" '{print $2}')
+      
+      if [[ -z "$BPSTART" ]]; then export BPSTART=0; fi
+      if [[ -z "$BPEND" ]]; then export BPEND=1000000000; fi
+      
+      if [[ "$BPSTART" == 0 && "$BPEND" == 1000000000 ]]; then
+         export FileExtension=$CHR
+      else
+         export FileExtension=$CHR_"$BPSTART"_"$BPEND"
+      fi   
+
+      NROW_OBS=$(cat $ACC/012/sampleNamesObs_"$FileExtension".txt | wc -l)
+      NCOL_OBS=$(cat $ACC/012/mapObs_"$FileExtension".txt | wc -l)
+      NROW_PRED=$(cat $ACC/012/sampleNamesPred_$FileExtension.txt | wc -l)
+      NCOL_PRED=$(cat $ACC/012/mapPred_"$FileExtension".txt | wc -l)
+      
+      Rscript -e "accPath=\"$ACC\";referenceGenome=\"$REF_GENOME\";genoPanel=\"$GENO_PANEL\";count=\"$COUNT\";numColObs=\"$NCOL_OBS\";numRowObs=\"$NROW_OBS\";numColPred=\"$NCOL_PRED\";numRowPred=\"$NROW_PRED\";pos=\"$FileExtension\";source(\"$IMPUTEGEN_DIR/program/08_acc2_downScaled_externalVal.R\")"
+      wait
+      Rscript -e "accPath=\"$ACC\";pos=\"$FileExtension\";source(\"$IMPUTEGEN_DIR/program/09.alleleFreq_LD_downScaled_externalVal.R\")"
+      wait
+      gs -dBATCH -dNOPAUSE -q -sDEVICE=pdfwrite -dAutoRotatePages=/None -sOutputFile=$ACC/plots/plots_"$FileExtension".pdf $ACC/plots/page1_"$FileExtension".pdf $ACC/plots/page2_"$FileExtension".pdf $ACC/plots/page3_"$FileExtension".pdf $ACC/plots/page4_"$FileExtension".pdf $ACC/plots/page5_"$FileExtension".pdf
+      wait
+      rm $ACC/plots/page1_"$FileExtension".pdf $ACC/plots/page2_"$FileExtension".pdf $ACC/plots/page3_"$FileExtension".pdf $ACC/plots/page4_"$FileExtension".pdf $ACC/plots/page5_"$FileExtension".pdf $ACC/plots/Rplots.pdf $ACC/stats/Rplots.pdf 2> /dev/null
+      wait
+      rm $ACC/012/obsGRM_"$FileExtension".* $ACC/012/predGRM_"$FileExtension".* $ACC/012/pca_"$FileExtension".* 2> /dev/null
+      wait
+      
+      NROW_OBS=$(cat $ACC/012/plinkPhasedObs_"$FileExtension".fam | wc -l)
+      NCOL_OBS=$(cat $ACC/012/plinkPhasedObs_"$FileExtension".bim | wc -l)
+      NROW_PRED=$(cat $ACC/012/plinkPhasedPred_"$FileExtension".fam | wc -l)
+      NCOL_PRED=$(cat $ACC/012/plinkPhasedPred_"$FileExtension".bim | wc -l)      
+      Rscript -e "accPath=\"$ACC\";numColObs=\"$NCOL_OBS\";numRowObs=\"$NROW_OBS\";numColPred=\"$NCOL_PRED\";numRowPred=\"$NROW_PRED\";pos=\"$FileExtension\";source(\"$IMPUTEGEN_DIR/program/08_acc3_downScaled_externalVal_phasing.R\")"
+      wait
+      rm $PHASE/plink* > /dev/null 2>&1
+      rm $PHASE/pos_"$FileExtension".txt > /dev/null 2>&1
+      rm $ACC/012/plinkPhasedPred_"$FileExtension".* > /dev/null 2>&1 
+      rm $ACC/012/phasedPred012_"$FileExtension".* > /dev/null 2>&1 
+      rm $ACC/012/plinkPhasedObs_"$FileExtension".* > /dev/null 2>&1
+      rm $ACC/012/phasedObs012_"$FileExtension".* > /dev/null 2>&1 
+      wait
+
+   done
+   
+else
+   for REGION in $SELECT_CHROM; do
+      COUNT=$(( $COUNT + 1 ))
+      export REGION=$REGION
+      export CHR=$(echo $REGION | awk -F":" '{print $1}')
+      export BPSTART=$(echo $REGION | awk -F":" '{print $2}' | awk -F"-" '{print $1}')
+      export BPEND=$(echo $REGION | awk -F":" '{print $2}' | awk -F"-" '{print $2}')
+      
+      if [[ -z "$BPSTART" ]]; then export BPSTART=0; fi
+      if [[ -z "$BPEND" ]]; then export BPEND=1000000000; fi
+      
+      if [[ "$BPSTART" == 0 && "$BPEND" == 1000000000 ]]; then
+         export FileExtension=$CHR
+      else
+         export FileExtension=$CHR_"$BPSTART"_"$BPEND"
+      fi   
+
+      NROW=$(cat $ACC/012/sampleNames_"$FileExtension".txt | wc -l)
+      NCOL=$(cat $ACC/012/map_"$FileExtension".txt | wc -l)
+      
+      Rscript -e "accPath=\"$ACC\";referenceGenome=\"$REF_GENOME\";genoPanel=\"$GENO_PANEL\";count=\"$COUNT\";numCol=\"$NCOL\";numRow=\"$NROW\";pos=\"$FileExtension\";source(\"$IMPUTEGEN_DIR/program/08_acc2.R\")"
+      wait
+      Rscript -e "accPath=\"$ACC\";pos=\"$FileExtension\";source(\"$IMPUTEGEN_DIR/program/09.alleleFreq_LD.R\")"
+      wait
+      gs -dBATCH -dNOPAUSE -q -sDEVICE=pdfwrite -dAutoRotatePages=/None -sOutputFile=$ACC/plots/plots_"$FileExtension".pdf $ACC/plots/page1_"$FileExtension".pdf $ACC/plots/page2_"$FileExtension".pdf $ACC/plots/page3_"$FileExtension".pdf
+      wait
+      rm $ACC/plots/page1_"$FileExtension".pdf $ACC/plots/page2_"$FileExtension".pdf $ACC/plots/page3_"$FileExtension".pdf $ACC/plots/Rplots.pdf $ACC/stats/Rplots.pdf 2> /dev/null
+      wait
+      rm $ACC/012/genoGRM_"$FileExtension".* 2> /dev/null
+      wait
+      
+   done
+   
+fi 
+wait
+
+
+cd "$OUTPUT_DIR"/imputeGen_"$OUTPUT_NAME"
+mkdir -p imputeGen_"$OUTPUT_NAME"_report 2> /dev/null
+cp -r accuracy/plots imputeGen_"$OUTPUT_NAME"_report 2> /dev/null
+cp -r accuracy/summary imputeGen_"$OUTPUT_NAME"_report 2> /dev/null
+zip -q -u -r imputeGen_"$OUTPUT_NAME"_report.zip imputeGen_"$OUTPUT_NAME"_report 2> /dev/null
+rm -r imputeGen_"$OUTPUT_NAME"_report 2> /dev/null
+wait
+
+
+scontrol show job $SLURM_JOB_ID     ### write job information to SLURM output file
+js -j $SLURM_JOB_ID                 ### write resource usage to SLURM output file (powetools command)
+
+END1=$(date +%s)
+DIFF1=$(( $END1 - $START1 ))
+
+echo
+echo "#@ IMPUTATION ACCURACY TOOK $(printf '%dh:%dm:%ds\n' $(($DIFF1/3600)) $(($DIFF1%3600/60)) $(($DIFF1%60)))"
+echo
+echo "#@#####################################################"
+
+
